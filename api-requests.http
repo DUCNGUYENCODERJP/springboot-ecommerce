@@ -1,0 +1,25 @@
+### Đăng ký tài khoản (Register)
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Test User",
+  "email": "testuser@example.com",
+  "phone": "0123456789",
+  "password": "password123"
+}
+
+### Đăng nhập (Login)
+# @name login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "password123"
+}
+
+### Lấy thông tin user hiện tại (ví dụ nếu có endpoint /api/users/me)
+# Sử dụng token lấy được từ bước đăng nhập
+GET http://localhost:8080/api/users/me
+Authorization: Bearer {{login.response.body.token}}

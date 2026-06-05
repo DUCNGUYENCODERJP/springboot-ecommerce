@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luxury Hotel - Admin Panel</title>
+    <link rel="stylesheet" href="/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div id="auth-view" class="auth-wrapper hidden">
+        <div class="auth-card">
+            <h2 style="text-align: center; margin-bottom: 24px;">Đăng nhập Quản trị</h2>
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label>Email Quản trị</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn-primary">Đăng nhập</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboard-view" style="display: none; width: 100%;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-icon">LH</div>
+                <span>Luxury Hotel</span>
+                <span style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; margin-left: auto;">Admin</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-view="dashboard" onclick="adminApp.navigate('dashboard')">
+                    <span>📊</span> Dashboard
+                </div>
+                <div class="nav-item" data-view="hotels" onclick="adminApp.navigate('hotels')">
+                    <span>🏨</span> Khách sạn
+                </div>
+                <div class="nav-item" data-view="rooms" onclick="adminApp.navigate('rooms')">
+                    <span>🚪</span> Phòng
+                </div>
+                <div class="nav-item" data-view="bookings" onclick="adminApp.navigate('bookings')">
+                    <span>📅</span> Đặt phòng
+                </div>
+                <div class="nav-item" data-view="users" onclick="adminApp.navigate('users')">
+                    <span>👥</span> Người dùng
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-profile">
+                    <div class="admin-avatar" id="admin-initial">A</div>
+                    <div class="admin-info">
+                        <div id="admin-name">Quản trị viên</div>
+                        <span id="admin-email">admin@luxuryhotel.vn</span>
+                    </div>
+                </div>
+                <div class="nav-item" onclick="adminApp.logout()" style="margin-bottom: 0;">
+                    <span>🚪</span> Đăng xuất
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="breadcrumb" id="topbar-title">
+                    Trang chủ > <span>Dashboard</span>
+                </div>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <span style="font-size: 1.2rem; cursor: pointer;">🔔</span>
+                    <span style="font-size: 1.2rem; cursor: pointer;">⚙️</span>
+                </div>
+            </header>
+
+            <div class="dashboard-container">
+                <!-- VIEW: DASHBOARD -->
+                <section id="view-dashboard" class="admin-view active">
+                    <div class="page-header">
+                        <h1>Dashboard</h1>
+                        <p>Tổng quan hệ thống khách sạn Luxury Hotel</p>
+                    </div>
+
+                    <div class="stats-grid modern-stats">
+                        <div class="stat-card modern">
+                            <div class="stat-header">
+                                <span class="stat-title">ĐẶT PHÒNG MỚI</span>
+                                <span class="stat-icon-small">📅</span>
+                            </div>
+                            <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;">+</span> <span id="stat-bookings-count">0</span></h3>
+                            <div class="stat-progress-bar" style="background: linear-gradient(to right, #f43f5e 50%, #e2e8f0 50%);"></div>
+                            <div class="stat-footer">
+                                <span class="stat-trend up" style="color: #f43f5e">↗ 23%</span> <span class="stat-desc">so với tháng trước</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card modern">
+                            <div class="stat-header">
+                                <span class="stat-title">TỔNG KHÁCH SẠN</span>
+                                <span class="stat-icon-small">🏨</span>
+                            </div>
+                            <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-hotels">0</span></h3>
+                            <div class="stat-progress-bar" style="background: linear-gradient(to right, #eab308 65%, #e2e8f0 65%);"></div>
+                            <div class="stat-footer">
+                                <span class="stat-trend up" style="color: #eab308">↗ 15%</span> <span class="stat-desc">so với tháng trước</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card modern">
+                            <div class="stat-header">
+                                <span class="stat-title">TỔNG DOANH THU</span>
+                                <span class="stat-icon-small">💰</span>
+                            </div>
+                            <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-revenue">0</span></h3>
+                            <div class="stat-progress-bar" style="background: linear-gradient(to right, #3b82f6 80%, #e2e8f0 80%);"></div>
+                            <div class="stat-footer">
+                                <span class="stat-trend up" style="color: #3b82f6">↗ 27%</span> <span class="stat-desc">so với tháng trước</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card modern">
+                            <div class="stat-header">
+                                <span class="stat-title">TỔNG NGƯỜI DÙNG</span>
+                                <span class="stat-icon-small">👥</span>
+                            </div>
+                            <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-users">0</span></h3>
+                            <div class="stat-progress-bar" style="background: linear-gradient(to right, #10b981 90%, #e2e8f0 90%);"></div>
+                            <div class="stat-footer">
+                                <span class="stat-trend up" style="color: #10b981">↗ 38%</span> <span class="stat-desc">so với tháng trước</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid modern-charts">
+                        <div class="chart-card line-chart-container">
+                            <div class="chart-header flex-between">
+                                <h3>BIỂU ĐỒ DOANH THU</h3>
+                                <span class="chart-actions"></span>
+                            </div>
+                            <p class="chart-desc">Thống kê doanh thu và lượng đặt phòng theo các tháng trong năm nay so với năm trước. Biểu đồ thể hiện xu hướng tăng trưởng.</p>
+                            <div class="canvas-wrapper">
+                                <canvas id="revenueChart" height="280"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card donut-chart-container">
+                            <div class="chart-header flex-between">
+                                <h3>TỈ TRỌNG ĐẶT PHÒNG</h3>
+                                <span class="chart-actions"></span>
+                            </div>
+                            <p class="chart-desc">Phân bổ tỉ trọng đặt phòng theo từng khách sạn nổi bật trong hệ thống.</p>
+                            <div class="canvas-wrapper donut-wrapper">
+                                <canvas id="hotelChart" height="220"></canvas>
+                                <div class="donut-inner-text">
+                                    <span class="donut-label">TỔNG ĐẶT PHÒNG</span>
+                                    <span class="donut-value" id="total-bookings-donut">0</span>
+                                </div>
+                            </div>
+                            <div class="donut-legend" id="donut-legend">
+                                <!-- Legend generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-grid">
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <h3>Đặt phòng gần đây</h3>
+                                <a href="#" style="font-size: 0.85rem; color: var(--primary);" onclick="adminApp.navigate('bookings')">Xem tất cả</a>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Mã</th>
+                                            <th>Khách</th>
+                                            <th>Khách sạn</th>
+                                            <th>Số tiền</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-bookings-list">
+                                        <!-- Loaded via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="data-card">
+                            <div class="data-card-header">
+                                <h3>Khách sạn nổi bật</h3>
+                                <a href="#" style="font-size: 0.85rem; color: var(--primary);" onclick="adminApp.navigate('hotels')">Xem tất cả</a>
+                            </div>
+                            <div id="featured-hotels-list">
+                                <!-- Loaded via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: HOTELS -->
+                <section id="view-hotels" class="admin-view hidden">
+                    <div class="page-header flex-between">
+                        <div>
+                            <h1>Quản lý Khách sạn</h1>
+                            <p>Thêm, sửa, xóa và theo dõi danh sách khách sạn</p>
+                        </div>
+                        <button class="btn-primary" onclick="adminApp.openModal('hotelModal')">
+                            + Thêm Khách sạn
+                        </button>
+                    </div>
+                    <div class="data-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Tên khách sạn</th>
+                                        <th>Địa điểm</th>
+                                        <th>Đánh giá</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-hotels-body">
+                                    <!-- Loaded via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: ROOMS -->
+                <section id="view-rooms" class="admin-view hidden">
+                    <div class="page-header flex-between">
+                        <div>
+                            <h1>Quản lý Phòng</h1>
+                            <p>Danh sách các phòng thuộc các khách sạn</p>
+                        </div>
+                        <button class="btn-primary" onclick="adminApp.openModal('roomModal')">
+                            + Thêm Phòng
+                        </button>
+                    </div>
+                    <div class="data-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Khách sạn</th>
+                                        <th>Số phòng</th>
+                                        <th>Loại</th>
+                                        <th>Giá/đêm</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-rooms-body">
+                                    <!-- Loaded via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: BOOKINGS -->
+                <section id="view-bookings" class="admin-view hidden">
+                    <div class="page-header">
+                        <h1>Quản lý Đặt phòng</h1>
+                        <p>Lịch sử đặt phòng trên hệ thống</p>
+                    </div>
+                    <div class="data-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Mã Đặt</th>
+                                        <th>Khách sạn</th>
+                                        <th>Phòng</th>
+                                        <th>Check In/Out</th>
+                                        <th>Số tiền</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-bookings-body">
+                                    <!-- Loaded via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: USERS -->
+                <section id="view-users" class="admin-view hidden">
+                    <div class="page-header">
+                        <h1>Quản lý Người dùng</h1>
+                        <p>Danh sách tài khoản thành viên</p>
+                    </div>
+                    <div class="data-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Họ tên</th>
+                                        <th>Email</th>
+                                        <th>SĐT</th>
+                                        <th>Vai trò</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-users-body">
+                                    <!-- Loaded via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Modal: Hotel Form -->
+    <div id="hotelModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="hotel-modal-title">Thêm Khách sạn mới</h3>
+                <span class="close-modal" onclick="adminApp.closeModal('hotelModal')">&times;</span>
+            </div>
+            <form id="hotel-form">
+                <input type="hidden" id="hotel-id" name="id">
+                <div class="form-group">
+                    <label>Tên khách sạn *</label>
+                    <input type="text" id="hotel-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Địa chỉ *</label>
+                    <input type="text" id="hotel-address" name="address" class="form-control" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Thành phố *</label>
+                        <input type="text" id="hotel-city" name="city" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Quốc gia *</label>
+                        <input type="text" id="hotel-country" name="country" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="width: 100px;">
+                        <label>Số sao *</label>
+                        <input type="number" id="hotel-starRating" name="starRating" class="form-control" min="1" max="5" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea id="hotel-description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline" onclick="adminApp.closeModal('hotelModal')">Hủy</button>
+                    <button type="submit" class="btn-primary">Lưu thông tin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Room Form -->
+    <div id="roomModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="room-modal-title">Thêm Phòng mới</h3>
+                <span class="close-modal" onclick="adminApp.closeModal('roomModal')">&times;</span>
+            </div>
+            <form id="room-form">
+                <input type="hidden" id="room-id" name="id">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Khách sạn trực thuộc *</label>
+                        <select id="room-hotelId" name="hotelId" class="form-control" required>
+                            <!-- Loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Trạng thái *</label>
+                        <select id="room-status" name="status" class="form-control" required>
+                            <option value="AVAILABLE">Sẵn sàng (Available)</option>
+                            <option value="OCCUPIED">Đang thuê (Occupied)</option>
+                            <option value="MAINTENANCE">Bảo trì (Maintenance)</option>
+                            <option value="INACTIVE">Ngừng hoạt động (Inactive)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Số phòng *</label>
+                        <input type="text" id="room-roomNumber" name="roomNumber" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Loại phòng *</label>
+                        <select id="room-type" name="type" class="form-control" required>
+                            <option value="STANDARD">Standard</option>
+                            <option value="DELUXE">Deluxe</option>
+                            <option value="FAMILY">Family</option>
+                            <option value="SUITE">Suite</option>
+                            <option value="PRESIDENTIAL">Presidential</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Giá 1 đêm (VND) *</label>
+                        <input type="number" id="room-price" name="pricePerNight" class="form-control" min="0" required>
+                    </div>
+                    <div class="form-group" style="width: 100px;">
+                        <label>Sức chứa *</label>
+                        <input type="number" id="room-capacity" name="capacity" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group" style="width: 100px;">
+                        <label>Tầng *</label>
+                        <input type="number" id="room-floor" name="floor" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group checkbox-row" style="display: flex; gap: 20px; margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="room-hasWifi" name="hasWifi" value="true">
+                        <span>Có Wifi miễn phí</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="room-hasBreakfast" name="hasBreakfast" value="true">
+                        <span>Bao gồm bữa sáng</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả phòng</label>
+                    <textarea id="room-description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline" onclick="adminApp.closeModal('roomModal')">Hủy</button>
+                    <button type="submit" class="btn-primary">Lưu thông tin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">
+        <span id="toast-msg"></span>
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>

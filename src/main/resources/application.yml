@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: luxury-hotel
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/luxury_hotel?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:VGhpc0lzQVNlY3VyZUJhc2U2NEtleUZvckx1eHVyeUhvdGVsQXBwMTIzNDU2Nzg5MDEyMzQ1Njc4OTA=}
+      access-token-expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+      issuer: ${JWT_ISSUER:luxury-hotel}
+      allowed-origins:
+        - ${CORS_ORIGIN_1:http://localhost:3000}
+        - ${CORS_ORIGIN_2:http://localhost:5173}
+  admin:
+    full-name: ${ADMIN_FULL_NAME:System Admin}
+    email: ${ADMIN_EMAIL:admin@luxuryhotel.com}
+    phone: ${ADMIN_PHONE:0900000000}
+    password: ${ADMIN_PASSWORD:Admin@12345}

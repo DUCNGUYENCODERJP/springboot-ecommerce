@@ -1,0 +1,25 @@
+{
+  "folders": [
+    {
+      "path": "luxury-hotel"
+    }
+  ],
+  "settings": {
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.maven.enabled": true,
+    "files.exclude": {
+      "**/target": true
+    },
+    "search.exclude": {
+      "**/target": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "vscjava.vscode-java-pack",
+      "redhat.java",
+      "vscjava.vscode-maven",
+      "gabrielbb.vscode-lombok"
+    ]
+  }
+}
