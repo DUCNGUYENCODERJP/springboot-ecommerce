@@ -141,6 +141,24 @@ public class BookingService {
         return bookingMapper.toResponse(bookingRepository.save(booking));
     }
 
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, BookingStatus status) {
+        User currentUser = userService.getCurrentUserEntity();
+        boolean isAdmin = currentUser.getRoles().stream().anyMatch(role -> role.name().equals("ADMIN"));
+        if (!isAdmin) {
+            throw new AccessDeniedException("Only administrators can update booking status");
+        }
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                
+        // Optional validation: you could prevent checking out if not checked in, etc.
+        // For flexibility, admins can set it to any status.
+
+        booking.setStatus(status);
+        return bookingMapper.toResponse(bookingRepository.save(booking));
+    }
+
     private void validateBookingDates(CreateBookingRequest request) {
         if (request.checkOutDate() == null || !request.checkOutDate().isAfter(request.checkInDate())) {
             throw new IllegalArgumentException("Check-out date must be after check-in date");

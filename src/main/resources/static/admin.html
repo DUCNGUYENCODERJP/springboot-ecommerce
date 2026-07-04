@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luxury Hotel - Admin Panel</title>
-    <link rel="stylesheet" href="/admin.css">
+    <link rel="stylesheet" href="/admin.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -96,7 +96,7 @@
                             <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;">+</span> <span id="stat-bookings-count">0</span></h3>
                             <div class="stat-progress-bar" style="background: linear-gradient(to right, #f43f5e 50%, #e2e8f0 50%);"></div>
                             <div class="stat-footer">
-                                <span class="stat-trend up" style="color: #f43f5e">↗ 23%</span> <span class="stat-desc">so với tháng trước</span>
+                                <span id="booking-growth" class="stat-trend up" style="color: #f43f5e">↗ 23%</span> <span class="stat-desc">so với tháng trước</span>
                             </div>
                         </div>
 
@@ -108,7 +108,7 @@
                             <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-hotels">0</span></h3>
                             <div class="stat-progress-bar" style="background: linear-gradient(to right, #eab308 65%, #e2e8f0 65%);"></div>
                             <div class="stat-footer">
-                                <span class="stat-trend up" style="color: #eab308">↗ 15%</span> <span class="stat-desc">so với tháng trước</span>
+                                <span id="hotel-growth" class="stat-trend up" style="color: #eab308">↗ 15%</span> <span class="stat-desc">so với tháng trước</span>
                             </div>
                         </div>
 
@@ -120,7 +120,7 @@
                             <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-revenue">0</span></h3>
                             <div class="stat-progress-bar" style="background: linear-gradient(to right, #3b82f6 80%, #e2e8f0 80%);"></div>
                             <div class="stat-footer">
-                                <span class="stat-trend up" style="color: #3b82f6">↗ 27%</span> <span class="stat-desc">so với tháng trước</span>
+                                <span id="revenue-growth" class="stat-trend up" style="color: #3b82f6">↗ 27%</span> <span class="stat-desc">so với tháng trước</span>
                             </div>
                         </div>
 
@@ -132,7 +132,7 @@
                             <h3 class="stat-value"><span style="font-size: 1.2rem; color: #94a3b8; font-weight: normal; margin-right: 4px;"></span> <span id="stat-users">0</span></h3>
                             <div class="stat-progress-bar" style="background: linear-gradient(to right, #10b981 90%, #e2e8f0 90%);"></div>
                             <div class="stat-footer">
-                                <span class="stat-trend up" style="color: #10b981">↗ 38%</span> <span class="stat-desc">so với tháng trước</span>
+                                <span id="user-growth" class="stat-trend up" style="color: #10b981">↗ 38%</span> <span class="stat-desc">so với tháng trước</span>
                             </div>
                         </div>
                     </div>
@@ -167,6 +167,45 @@
                         </div>
                     </div>
 
+                    <div class="revenue-stats-section" style="margin-top: 32px; margin-bottom: 32px;">
+                        <div class="page-header" style="margin-bottom: 20px;">
+                            <h2 style="font-size: 1.25rem; font-weight: 600;">Thống kê Doanh thu theo Khách sạn</h2>
+                            <p style="color: #64748b; font-size: 0.9rem;">Chi tiết doanh thu và biểu đồ so sánh giữa các khách sạn</p>
+                        </div>
+                        
+                        <div class="charts-grid modern-charts" style="margin-bottom: 24px; display: block;">
+                            <div class="chart-card">
+                                <div class="chart-header flex-between">
+                                    <h3>SO SÁNH DOANH THU 12 THÁNG</h3>
+                                </div>
+                                <div class="canvas-wrapper" style="height: 350px; margin-top: 16px;">
+                                    <canvas id="hotelRevenueBarChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="data-card">
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Hạng</th>
+                                            <th>Khách sạn</th>
+                                            <th>Thành phố</th>
+                                            <th>Tổng doanh thu</th>
+                                            <th>Doanh thu tháng này</th>
+                                            <th>Booking (Tháng này)</th>
+                                            <th>Tăng trưởng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="hotel-revenue-table-body">
+                                        <!-- Loaded via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bottom-grid">
                         <div class="data-card">
                             <div class="data-card-header">
@@ -178,6 +217,7 @@
                                     <thead>
                                         <tr>
                                             <th>Mã</th>
+                                            <th>Ngày đặt</th>
                                             <th>Khách</th>
                                             <th>Khách sạn</th>
                                             <th>Số tiền</th>
@@ -255,6 +295,7 @@
                                         <th>Số phòng</th>
                                         <th>Loại</th>
                                         <th>Giá/đêm</th>
+                                        <th>Trạng thái</th>
                                         <th>Thao tác</th>
                                     </tr>
                                 </thead>
@@ -278,11 +319,13 @@
                                 <thead>
                                     <tr>
                                         <th>Mã Đặt</th>
+                                        <th>Ngày đặt</th>
                                         <th>Khách sạn</th>
                                         <th>Phòng</th>
                                         <th>Check In/Out</th>
                                         <th>Số tiền</th>
                                         <th>Trạng thái</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-bookings-body">
@@ -449,6 +492,6 @@
         <span id="toast-msg"></span>
     </div>
 
-    <script src="/admin.js"></script>
+    <script src="/admin.js?v=2"></script>
 </body>
 </html>

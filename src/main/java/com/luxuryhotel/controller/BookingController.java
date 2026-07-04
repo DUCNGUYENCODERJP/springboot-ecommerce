@@ -66,4 +66,10 @@ public class BookingController {
     public BookingResponse cancelMyBooking(@PathVariable Long bookingId) {
         return bookingService.cancelMyBooking(bookingId);
     }
+
+    @PatchMapping("/{bookingId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BookingResponse updateBookingStatus(@PathVariable Long bookingId, @RequestParam com.luxuryhotel.domain.booking.BookingStatus status) {
+        return bookingService.updateBookingStatus(bookingId, status);
+    }
 }

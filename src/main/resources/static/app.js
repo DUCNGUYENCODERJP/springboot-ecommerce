@@ -9,9 +9,14 @@ const app = {
         searchParams: {
             checkIn: '',
             checkOut: '',
-            hotelId: ''
+            city: ''
         },
-        toastTimer: null
+        toastTimer: null,
+        // Review state
+        currentReviewRoomId: null,
+        reviewPage: 0,
+        reviewTotalPages: 0,
+        myReviewedBookingIds: new Set()
     },
 
     els: {},
@@ -34,8 +39,10 @@ const app = {
         // Nav
         this.els.navLogin = document.getElementById('nav-login');
         this.els.navRegister = document.getElementById('nav-register');
+        this.els.navMyBookings = document.getElementById('nav-my-bookings');
         this.els.navUser = document.getElementById('nav-user');
         this.els.userName = document.getElementById('user-name');
+        this.els.myBookingsList = document.getElementById('my-bookings-list');
         
         // Forms
         this.els.homeSearchForm = document.getElementById('home-search-form');
@@ -44,9 +51,8 @@ const app = {
         this.els.registerForm = document.getElementById('register-form');
         this.els.bookingForm = document.getElementById('booking-form');
         
-        // Selects
-        this.els.homeHotelSelect = document.getElementById('home-hotel-select');
-        this.els.searchHotelSelect = document.getElementById('search-hotel-select');
+        // Selects/Inputs
+        this.els.searchMeta = document.getElementById('search-meta');
         
         // Grids
         this.els.featuredHotelsGrid = document.getElementById('featured-hotels-grid');
@@ -102,15 +108,149 @@ const app = {
         this.els.searchPageForm.checkOutDate.value = this.state.searchParams.checkOut;
     },
 
-    navigate(viewId) {
+    navigate(viewId, options = {}) {
         window.scrollTo(0, 0);
         this.els.views.forEach(view => {
             view.classList.add('hidden');
         });
         document.getElementById(`view-${viewId}`).classList.remove('hidden');
         
-        if (viewId === 'search') {
+        if (viewId === 'search' && !options.skipDefaultLoad) {
             this.loadAllRooms();
+        }
+        if (viewId === 'my-bookings') {
+            this.loadMyBookings();
+        }
+    },
+
+    openMyBookings() {
+        if (!this.state.token) {
+            this.showToast('Vui lòng đăng nhập để xem đơn đặt phòng', true);
+            this.navigate('login');
+            return;
+        }
+        this.navigate('my-bookings');
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    },
+
+    bookingStatusLabel(status) {
+        const labels = {
+            PENDING: 'Chờ xác nhận',
+            CONFIRMED: 'Đã xác nhận',
+            CHECKED_IN: 'Đã nhận phòng',
+            CHECKED_OUT: 'Đã trả phòng',
+            CANCELLED: 'Đã hủy'
+        };
+        return labels[status] || status;
+    },
+
+    bookingStatusClass(status) {
+        return `order-status order-status--${String(status).toLowerCase()}`;
+    },
+
+    canCancelBooking(booking) {
+        if (booking.status === 'CANCELLED' || booking.status === 'CHECKED_IN') return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const checkIn = new Date(booking.checkInDate + 'T00:00:00');
+        return checkIn > today;
+    },
+
+    formatDateVi(isoDate) {
+        if (!isoDate) return '—';
+        const d = new Date(isoDate + 'T12:00:00');
+        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    },
+
+    formatDateTimeVi(isoInstant) {
+        if (!isoInstant) return '';
+        return new Date(isoInstant).toLocaleString('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    },
+
+    async loadMyBookings() {
+        if (!this.state.token) return;
+        this.els.myBookingsList.innerHTML = '<div class="loading-spinner" style="margin:40px auto"></div>';
+        try {
+            await this.loadMyReviewedBookings();
+            const bookings = await this.api('/api/bookings/my');
+            this.state.myBookings = bookings;
+            this.renderMyBookings(bookings);
+        } catch (e) {
+            this.els.myBookingsList.innerHTML = '<div class="empty-state">Không tải được danh sách đơn. Vui lòng thử lại.</div>';
+        }
+    },
+
+    renderMyBookings(bookings) {
+        if (!bookings.length) {
+            this.els.myBookingsList.innerHTML = `
+                <div class="empty-state">
+                    <p style="font-size:2rem;margin-bottom:12px">📋</p>
+                    <h3 style="margin-bottom:8px">Chưa có đơn đặt phòng</h3>
+                    <p style="margin-bottom:20px">Hãy tìm khách sạn và đặt phòng để xem đơn tại đây.</p>
+                    <button type="button" class="btn btn-primary" onclick="app.navigate('search')">Tìm khách sạn</button>
+                </div>`;
+            return;
+        }
+
+        this.els.myBookingsList.innerHTML = bookings.map((b) => {
+            const hotel = b.room.hotel;
+            const cancelBtn = this.canCancelBooking(b)
+                ? `<button type="button" class="btn-danger-outline" onclick="app.cancelBooking(${b.id})">Hủy đơn</button>`
+                : '';
+            // Review button for CHECKED_OUT bookings
+            let reviewSection = '';
+            if (b.status === 'CHECKED_OUT') {
+                if (this.state.myReviewedBookingIds.has(b.id)) {
+                    reviewSection = `<span class="reviewed-badge">✅ Đã đánh giá</span>`;
+                } else {
+                    const enc = (s) => String(s).replace(/'/g, "\\'");
+                    reviewSection = `<button type="button" class="btn-review" onclick="app.openReviewModal(${b.id},'${enc(b.bookingCode)}','${enc(b.room.roomNumber)}','${enc(hotel.name)}')">⭐ Viết đánh giá</button>`;
+                }
+            }
+            const hasActions = cancelBtn || reviewSection;
+            return `
+                <article class="order-card">
+                    <div class="order-card__head">
+                        <div>
+                            <div class="order-card__code">${this.escapeHtml(b.bookingCode)}</div>
+                            <div class="order-card__date">Đặt lúc: ${this.formatDateTimeVi(b.createdAt)}</div>
+                        </div>
+                        <span class="${this.bookingStatusClass(b.status)}">${this.bookingStatusLabel(b.status)}</span>
+                    </div>
+                    <div class="order-card__body">
+                        <div>
+                            <div class="order-card__hotel">${this.escapeHtml(hotel.name)}</div>
+                            <div class="order-card__meta">
+                                📍 ${this.escapeHtml(hotel.address)}, ${this.escapeHtml(hotel.city)}<br>
+                                🛏️ Phòng ${this.escapeHtml(b.room.type)} · Số ${this.escapeHtml(b.room.roomNumber)}<br>
+                                📅 Nhận: ${this.formatDateVi(b.checkInDate)} → Trả: ${this.formatDateVi(b.checkOutDate)}<br>
+                                👥 ${b.guestCount} khách
+                                ${b.specialRequest ? `<br>💬 ${this.escapeHtml(b.specialRequest)}` : ''}
+                            </div>
+                        </div>
+                        <div class="order-card__price">${this.formatMoney(b.totalPrice)}</div>
+                    </div>
+                    ${hasActions ? `<div class="order-card__actions">${cancelBtn}${reviewSection}</div>` : ''}
+                </article>`;
+        }).join('');
+    },
+
+    async cancelBooking(bookingId) {
+        if (!confirm('Bạn có chắc muốn hủy đơn đặt phòng này?')) return;
+        try {
+            await this.api(`/api/bookings/${bookingId}/cancel`, { method: 'PATCH' });
+            this.showToast('Đã hủy đơn đặt phòng');
+            await this.loadMyBookings();
+        } catch (error) {
+            this.showToast(error.message, true);
         }
     },
 
@@ -166,6 +306,7 @@ const app = {
         if (this.state.currentUser) {
             this.els.navLogin.classList.add('hidden');
             this.els.navRegister.classList.add('hidden');
+            if (this.els.navMyBookings) this.els.navMyBookings.classList.remove('hidden');
             this.els.navUser.classList.remove('hidden');
             this.els.userName.textContent = `Xin chào, ${this.state.currentUser.fullName}`;
             
@@ -186,6 +327,7 @@ const app = {
         } else {
             this.els.navLogin.classList.remove('hidden');
             this.els.navRegister.classList.remove('hidden');
+            if (this.els.navMyBookings) this.els.navMyBookings.classList.add('hidden');
             this.els.navUser.classList.add('hidden');
             
             const adminLink = document.getElementById('nav-admin-link');
@@ -238,18 +380,10 @@ const app = {
     async loadInitialData() {
         try {
             this.state.hotels = await this.api("/api/hotels");
-            this.renderHotelSelects();
             this.renderFeaturedHotels();
         } catch (e) {
             console.error("Failed to load hotels", e);
         }
-    },
-
-    renderHotelSelects() {
-        const options = `<option value="">Tất cả địa điểm</option>` + 
-            this.state.hotels.map(h => `<option value="${h.id}">${h.city} - ${h.name}</option>`).join('');
-        this.els.homeHotelSelect.innerHTML = options;
-        this.els.searchHotelSelect.innerHTML = options;
     },
 
     renderFeaturedHotels() {
@@ -282,22 +416,22 @@ const app = {
     async handleSearch(e, source) {
         e.preventDefault();
         const form = e.target;
-        this.state.searchParams.hotelId = form.hotelId.value;
+        this.state.searchParams.city = form.city.value;
         this.state.searchParams.checkIn = form.checkInDate.value;
         this.state.searchParams.checkOut = form.checkOutDate.value;
         
         // Sync forms
         if (source === 'home') {
-            this.els.searchHotelSelect.value = this.state.searchParams.hotelId;
+            this.els.searchPageForm.city.value = this.state.searchParams.city;
             this.els.searchPageForm.checkInDate.value = this.state.searchParams.checkIn;
             this.els.searchPageForm.checkOutDate.value = this.state.searchParams.checkOut;
         } else {
-            this.els.homeHotelSelect.value = this.state.searchParams.hotelId;
+            this.els.homeSearchForm.city.value = this.state.searchParams.city;
             this.els.homeSearchForm.checkInDate.value = this.state.searchParams.checkIn;
             this.els.homeSearchForm.checkOutDate.value = this.state.searchParams.checkOut;
         }
 
-        this.navigate('search');
+        this.navigate('search', { skipDefaultLoad: true });
         await this.loadAvailableRooms();
     },
 
@@ -314,7 +448,7 @@ const app = {
     async loadAvailableRooms() {
         this.els.searchResultsGrid.innerHTML = '<div class="loading-spinner"></div>';
         const params = new URLSearchParams();
-        if (this.state.searchParams.hotelId) params.set('hotelId', this.state.searchParams.hotelId);
+        if (this.state.searchParams.city) params.set('city', this.state.searchParams.city);
         params.set('checkInDate', this.state.searchParams.checkIn);
         params.set('checkOutDate', this.state.searchParams.checkOut);
         
@@ -339,25 +473,39 @@ const app = {
             "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80"
         ];
 
-        // Group by hotel for nicer display if needed, but for now display individual rooms as "hotel cards"
+        // Display individual rooms as cards with "Book Now" button
         this.els.searchResultsGrid.innerHTML = rooms.map((room, i) => `
             <div class="hotel-card">
                 <div class="hotel-card__image" style="background-image: url('${images[i % images.length]}')">
-                    <div class="hotel-card__rating">⭐ ${room.hotel.starRating}.0</div>
+                    <div class="hotel-card__badge">${room.type}</div>
                 </div>
                 <div class="hotel-card__content">
                     <h3>${room.hotel.name}</h3>
-                    <div class="hotel-card__location">📍 ${room.hotel.address}, ${room.hotel.city}</div>
+                    <div class="hotel-card__location">📍 ${room.hotel.city}, ${room.hotel.country}</div>
                     <p style="font-size:0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-                        Phòng ${room.type} • Tối đa ${room.capacity} người
+                        Sức chứa: ${room.capacity} người • Tầng ${room.floor ?? '?'}
+                        ${room.hasWifi ? '• 🛜 WiFi' : ''}${room.hasBreakfast ? ' • 🍳 Bữa sáng' : ''}
                     </p>
                     <div class="hotel-card__footer">
                         <div class="hotel-card__price">${this.formatMoney(room.pricePerNight)}<span>/đêm</span></div>
-                        <button class="btn btn-primary" onclick="app.viewHotel(${room.hotel.id})">Chọn phòng</button>
+                        <button class="btn btn-primary" onclick="app.openBookingForRoom(${room.id}, ${room.hotel.id})">Đặt ngay</button>
                     </div>
                 </div>
             </div>
         `).join('');
+    },
+
+    // Navigate to hotel detail page and pre-select a room from search results
+    async openBookingForRoom(roomId, hotelId) {
+        await this.viewHotel(hotelId);
+        // After hotel page loads, scroll to the matching room card
+        setTimeout(() => {
+            const roomCard = document.querySelector(`[data-room-id="${roomId}"]`);
+            if (roomCard) {
+                roomCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                roomCard.style.outline = '3px solid var(--primary)';
+            }
+        }, 400);
     },
 
     async viewHotel(hotelId) {
@@ -375,12 +523,19 @@ const app = {
 
         this.navigate('detail');
         this.els.detailRoomList.innerHTML = '<div class="loading-spinner"></div>';
+        // Reset reviews panel when switching hotels
+        const reviewsContainer = document.getElementById('reviews-container');
+        if (reviewsContainer) reviewsContainer.style.display = 'none';
+        this.state.currentReviewRoomId = null;
         
         try {
-            // Get all rooms for this hotel
             const allRooms = await this.api("/api/rooms");
             const hotelRooms = allRooms.filter(r => r.hotel.id === hotelId);
             this.renderHotelRooms(hotelRooms);
+            // Show reviews for the first room of this hotel
+            if (hotelRooms.length > 0) {
+                await this.showReviewsForRoom(hotelRooms[0].id);
+            }
         } catch (e) {
             this.els.detailRoomList.innerHTML = '<div class="empty-state">Không tải được danh sách phòng</div>';
         }
@@ -395,7 +550,7 @@ const app = {
         const roomImg = "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80";
         
         this.els.detailRoomList.innerHTML = rooms.map(room => `
-            <div class="room-list-item">
+            <div class="room-list-item" data-room-id="${room.id}">
                 <div class="room-img" style="background-image: url('${roomImg}')"></div>
                 <div class="room-info">
                     <h4>Phòng ${room.type} (Số ${room.roomNumber})</h4>
@@ -478,9 +633,184 @@ const app = {
                 body: JSON.stringify(payload)
             });
             this.showToast(`Đặt phòng thành công! Mã: ${booking.bookingCode}`);
-            this.navigate('home');
+            this.navigate('my-bookings');
         } catch (error) {
             this.showToast(error.message, true);
+        }
+    },
+
+    // ============================================================
+    // REVIEW METHODS
+    // ============================================================
+
+    starsHtml(rating, max = 5) {
+        let html = '';
+        for (let i = 1; i <= max; i++) {
+            html += `<span style="color:${i <= rating ? '#f59e0b' : '#d1d5db'}">★</span>`;
+        }
+        return html;
+    },
+
+    starLabel(rating) {
+        return ['', 'Kém 😞', 'Tạm được 😐', 'Tốt 🙂', 'Rất tốt 😊', 'Tuyệt vời 🤩'][rating] || '';
+    },
+
+    // Load reviews for the currently viewed hotel's rooms
+    async loadRoomReviews(pageOffset = 0) {
+        if (!this.state.currentReviewRoomId) return;
+        const newPage = this.state.reviewPage + pageOffset;
+        if (newPage < 0 || (this.state.reviewTotalPages > 0 && newPage >= this.state.reviewTotalPages)) return;
+
+        const container = document.getElementById('reviews-container');
+        const list = document.getElementById('reviews-list');
+        const badge = document.getElementById('reviews-summary-badge');
+        const pagination = document.getElementById('reviews-pagination');
+
+        list.innerHTML = '<div class="loading-spinner" style="margin:20px auto"></div>';
+        container.style.display = '';
+
+        try {
+            const [pageData, summary] = await Promise.all([
+                this.api(`/api/reviews/room/${this.state.currentReviewRoomId}?page=${newPage}&size=5`),
+                this.api(`/api/reviews/room/${this.state.currentReviewRoomId}/summary`)
+            ]);
+
+            this.state.reviewPage = pageData.page;
+            this.state.reviewTotalPages = pageData.totalPages;
+
+            // Summary badge
+            if (summary.totalReviews > 0) {
+                badge.style.display = '';
+                badge.innerHTML = `⭐ ${summary.averageRating} · ${summary.totalReviews} đánh giá`;
+            } else {
+                badge.style.display = 'none';
+            }
+
+            // Render reviews
+            if (!pageData.content || pageData.content.length === 0) {
+                list.innerHTML = `<div class="reviews-empty">
+                    <div class="reviews-empty-icon">💬</div>
+                    Chưa có đánh giá nào cho phòng này. Hãy là người đầu tiên!
+                </div>`;
+            } else {
+                list.innerHTML = pageData.content.map(r => {
+                    const initials = r.userFullName ? r.userFullName.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase() : '?';
+                    const date = new Date(r.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const comment = r.comment ? `<p class="review-card__comment">"${this.escapeHtml(r.comment)}"</p>` : '';
+                    return `<div class="review-card">
+                        <div class="review-card__header">
+                            <div class="review-card__user">
+                                <div class="review-card__avatar">${initials}</div>
+                                <div>
+                                    <div class="review-card__name">${this.escapeHtml(r.userFullName)}</div>
+                                    <div class="review-card__date">${date}</div>
+                                </div>
+                            </div>
+                            <div class="review-stars">${this.starsHtml(r.rating)}</div>
+                        </div>
+                        ${comment}
+                    </div>`;
+                }).join('');
+            }
+
+            // Pagination
+            if (pageData.totalPages > 1) {
+                pagination.style.display = '';
+                document.getElementById('reviews-prev-btn').disabled = pageData.first;
+                document.getElementById('reviews-next-btn').disabled = pageData.last;
+                document.getElementById('reviews-page-info').textContent = `Trang ${pageData.page + 1} / ${pageData.totalPages}`;
+            } else {
+                pagination.style.display = 'none';
+            }
+        } catch (e) {
+            list.innerHTML = '<div class="reviews-empty">Không tải được đánh giá.</div>';
+        }
+    },
+
+    // Show reviews for a specific room (called when viewing hotel detail)
+    async showReviewsForRoom(roomId) {
+        this.state.currentReviewRoomId = roomId;
+        this.state.reviewPage = 0;
+        this.state.reviewTotalPages = 0;
+        await this.loadRoomReviews(0);
+    },
+
+    // Load IDs of bookings the user has already reviewed
+    async loadMyReviewedBookings() {
+        if (!this.state.token) return;
+        try {
+            const data = await this.api('/api/reviews/my?page=0&size=100');
+            this.state.myReviewedBookingIds = new Set((data.content || []).map(r => r.bookingId));
+        } catch (e) {
+            this.state.myReviewedBookingIds = new Set();
+        }
+    },
+
+    // Open review modal for a booking
+    openReviewModal(bookingId, bookingCode, roomNumber, hotelName) {
+        if (!this.state.token) {
+            this.showToast('Vui lòng đăng nhập để đánh giá', true);
+            return;
+        }
+        document.getElementById('review-booking-id').value = bookingId;
+        document.getElementById('modal-booking-info').innerHTML =
+            `<strong>${this.escapeHtml(hotelName)}</strong> · Phòng ${this.escapeHtml(roomNumber)}<br>Mã đặt phòng: <strong>${this.escapeHtml(bookingCode)}</strong>`;
+
+        // Reset form
+        document.getElementById('review-form').reset();
+        document.getElementById('star-label-text').textContent = '';
+        document.getElementById('review-comment').value = '';
+        document.getElementById('comment-count').textContent = '0';
+
+        // Bind star change
+        document.querySelectorAll('.star-input-row input[type="radio"]').forEach(input => {
+            input.onchange = () => {
+                document.getElementById('star-label-text').textContent = this.starLabel(Number(input.value));
+            };
+        });
+
+        // Bind comment counter
+        document.getElementById('review-comment').oninput = (e) => {
+            document.getElementById('comment-count').textContent = e.target.value.length;
+        };
+
+        document.getElementById('review-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeReviewModal() {
+        document.getElementById('review-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+    },
+
+    async submitReview() {
+        const bookingId = Number(document.getElementById('review-booking-id').value);
+        const ratingInput = document.querySelector('.star-input-row input[name="rating"]:checked');
+        const comment = document.getElementById('review-comment').value.trim();
+        const btn = document.getElementById('submit-review-btn');
+
+        if (!ratingInput) {
+            this.showToast('Vui lòng chọn điểm đánh giá (số sao)', true);
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Đang gửi...';
+        try {
+            await this.api('/api/reviews', {
+                method: 'POST',
+                body: JSON.stringify({ bookingId, rating: Number(ratingInput.value), comment: comment || null })
+            });
+            this.closeReviewModal();
+            this.showToast('✅ Cảm ơn bạn đã đánh giá!');
+            this.state.myReviewedBookingIds.add(bookingId);
+            // Refresh bookings list to update button state
+            this.renderMyBookings(this.state.myBookings || []);
+        } catch (e) {
+            this.showToast(e.message || 'Gửi đánh giá thất bại', true);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Gửi đánh giá';
         }
     }
 };

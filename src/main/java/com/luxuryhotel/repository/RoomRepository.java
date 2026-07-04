@@ -43,6 +43,7 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
               and r.capacity >= :capacity
               and r.pricePerNight <= :maxPrice
               and (:hotelId is null or r.hotel.id = :hotelId)
+              and (:city is null or lower(r.hotel.city) like lower(concat('%', :city, '%')))
               and not exists (
                   select b from Booking b
                   where b.room = r
@@ -53,6 +54,7 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
             """)
     List<Room> searchAvailableRooms(
             @Param("hotelId") Long hotelId,
+            @Param("city") String city,
             @Param("checkInDate") java.time.LocalDate checkInDate,
             @Param("checkOutDate") java.time.LocalDate checkOutDate,
             @Param("capacity") int capacity,

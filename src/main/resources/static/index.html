@@ -16,6 +16,7 @@
         </a>
 
         <nav class="nav-links">
+            <a href="#" id="nav-my-bookings" class="hidden" onclick="app.openMyBookings(); return false;">Đơn của tôi</a>
             <a href="#" onclick="app.navigate('search')">Tìm khách sạn</a>
             <a href="#" id="nav-login" onclick="app.navigate('login')">Đăng nhập</a>
             <button id="nav-register" class="btn btn-primary" onclick="app.navigate('register')">Đăng ký</button>
@@ -32,15 +33,23 @@
     <!-- View: Home -->
     <section id="view-home" class="view">
         <div class="hero">
+            <img
+                class="hero-cover"
+                src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80"
+                alt=""
+                width="1920"
+                height="1080"
+                fetchpriority="high"
+            >
+            <div class="hero-overlay" aria-hidden="true"></div>
+            <div class="hero-content">
             <h1>Khám Phá Khách Sạn Sang Trọng</h1>
             <p>Tìm và đặt khách sạn tuyệt vời nhất cho chuyến đi của bạn</p>
             
             <form class="search-bar-overlay" id="home-search-form">
                 <div class="search-input-group">
-                    <label>Địa điểm</label>
-                    <select name="hotelId" id="home-hotel-select">
-                        <option value="">Tất cả địa điểm</option>
-                    </select>
+                    <label>Thành phố</label>
+                    <input type="text" name="city" placeholder="VD: Hà Nội, Đà Nẵng">
                 </div>
                 <div class="search-input-group">
                     <label>Nhận phòng</label>
@@ -50,8 +59,9 @@
                     <label>Trả phòng</label>
                     <input type="date" name="checkOutDate" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Tìm kiếm khách sạn</button>
+                <button type="submit" class="btn btn-primary">Tìm kiếm phòng trống</button>
             </form>
+            </div>
         </div>
 
         <div class="features-section">
@@ -167,10 +177,8 @@
             <div class="container">
                 <form class="search-bar-overlay" id="search-page-form">
                     <div class="search-input-group">
-                        <label>Địa điểm</label>
-                        <select name="hotelId" id="search-hotel-select">
-                            <option value="">Tất cả địa điểm</option>
-                        </select>
+                        <label>Thành phố</label>
+                        <input type="text" name="city" placeholder="VD: Hà Nội, Đà Nẵng">
                     </div>
                     <div class="search-input-group">
                         <label>Nhận phòng</label>
@@ -180,7 +188,7 @@
                         <label>Trả phòng</label>
                         <input type="date" name="checkOutDate" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                    <button type="submit" class="btn btn-primary">Tìm kiếm phòng</button>
                 </form>
             </div>
         </div>
@@ -227,6 +235,20 @@
                         <!-- Loaded via JS -->
                     </div>
                 </div>
+
+                <!-- Reviews section -->
+                <div class="detail-card" id="reviews-container" style="display:none">
+                    <div class="reviews-section-title">
+                        <h3>⭐ Đánh giá từ khách hàng</h3>
+                        <span class="reviews-summary-badge" id="reviews-summary-badge" style="display:none"></span>
+                    </div>
+                    <div id="reviews-list" class="reviews-list"></div>
+                    <div class="reviews-pagination" id="reviews-pagination" style="display:none">
+                        <button id="reviews-prev-btn" onclick="app.loadRoomReviews(-1)" disabled>← Trước</button>
+                        <span class="page-info" id="reviews-page-info"></span>
+                        <button id="reviews-next-btn" onclick="app.loadRoomReviews(1)">Tiếp →</button>
+                    </div>
+                </div>
             </div>
             
             <div class="detail-sidebar">
@@ -249,6 +271,15 @@
     </section>
 
     <!-- View: Booking -->
+    <!-- View: My Bookings -->
+    <section id="view-my-bookings" class="view hidden container">
+        <div class="detail-header">
+            <h1>Đơn đặt phòng của tôi</h1>
+            <p class="text-muted">Theo dõi trạng thái và quản lý các đặt phòng đã đặt</p>
+        </div>
+        <div id="my-bookings-list" class="my-bookings-list"></div>
+    </section>
+
     <section id="view-booking" class="view hidden container">
         <div class="detail-header">
             <h1>Xác nhận đặt phòng</h1>
@@ -371,6 +402,51 @@
 
 <div id="toast" class="toast">
     <span id="toast-msg"></span>
+</div>
+
+<!-- Modal: Viết đánh giá -->
+<div id="review-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>✍️ Viết đánh giá</h3>
+            <button class="modal-close" onclick="app.closeReviewModal()" aria-label="Đóng">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-booking-info" id="modal-booking-info"></div>
+            <form id="review-form">
+                <input type="hidden" id="review-booking-id">
+                <div class="star-rating-group">
+                    <label>Điểm đánh giá *</label>
+                    <div class="star-input-row">
+                        <input type="radio" id="star5" name="rating" value="5">
+                        <label for="star5" title="5 sao - Tuyệt vời">★</label>
+                        <input type="radio" id="star4" name="rating" value="4">
+                        <label for="star4" title="4 sao - Rất tốt">★</label>
+                        <input type="radio" id="star3" name="rating" value="3">
+                        <label for="star3" title="3 sao - Tốt">★</label>
+                        <input type="radio" id="star2" name="rating" value="2">
+                        <label for="star2" title="2 sao - Tạm được">★</label>
+                        <input type="radio" id="star1" name="rating" value="1">
+                        <label for="star1" title="1 sao - Kém">★</label>
+                    </div>
+                    <div class="star-label-text" id="star-label-text"></div>
+                </div>
+                <div class="form-group">
+                    <label for="review-comment">Nhận xét của bạn</label>
+                    <textarea id="review-comment" class="form-control" rows="4"
+                        placeholder="Chia sẻ trải nghiệm của bạn về phòng này... (tối đa 1000 ký tự)"
+                        maxlength="1000"></textarea>
+                    <div style="text-align:right; font-size:0.78rem; color:var(--text-muted); margin-top:4px">
+                        <span id="comment-count">0</span>/1000
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="app.closeReviewModal()">Hủy</button>
+            <button class="btn btn-primary" onclick="app.submitReview()" id="submit-review-btn">Gửi đánh giá</button>
+        </div>
+    </div>
 </div>
 
 <script src="/app.js"></script>

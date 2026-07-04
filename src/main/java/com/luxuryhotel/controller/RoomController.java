@@ -50,10 +50,11 @@ public class RoomController {
     @GetMapping("/available")
     public List<RoomResponse> searchAvailableRooms(@RequestParam LocalDate checkInDate,
                                                    @RequestParam LocalDate checkOutDate,
+                                                   @RequestParam(required = false) String city,
                                                    @RequestParam(required = false) Long hotelId,
                                                    @RequestParam(required = false) Integer guestCount,
                                                    @RequestParam(required = false) BigDecimal maxPrice) {
-        return roomService.searchAvailableRooms(hotelId, checkInDate, checkOutDate, guestCount, maxPrice);
+        return roomService.searchAvailableRooms(hotelId, city, checkInDate, checkOutDate, guestCount, maxPrice);
     }
 
     @PostMapping

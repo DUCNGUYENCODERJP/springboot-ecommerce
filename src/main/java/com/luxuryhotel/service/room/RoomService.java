@@ -53,6 +53,7 @@ public class RoomService {
 
     @Transactional(readOnly = true)
     public List<RoomResponse> searchAvailableRooms(Long hotelId,
+                                                   String city,
                                                    LocalDate checkInDate,
                                                    LocalDate checkOutDate,
                                                    Integer guestCount,
@@ -64,6 +65,7 @@ public class RoomService {
 
         return roomRepository.searchAvailableRooms(
                         hotelId,
+                        city == null || city.isBlank() ? null : city.trim(),
                         checkInDate,
                         checkOutDate,
                         minimumCapacity,
